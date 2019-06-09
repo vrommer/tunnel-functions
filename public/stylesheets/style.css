@@ -1,8 +1,32 @@
-body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+#vr-ifame-page {
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
-a {
-  color: #00B7FF;
+html,
+body {
+  height: 100%;
+}
+
+#vr-page-title {
+
+}
+
+#vr-page-header {
+  position: relative;
+  margin: 5px;
+  padding: 5px;
+  border: 1px solid black;
+  text-align: center;
+}
+
+#vr-page-header:after {
+  position: absolute;
+  content: "main page";
+  top: -10px;
+  left: 50%;
+  background-color: white;
+  padding: 0 5px;
+  transform: translate(-50%,0);
 }

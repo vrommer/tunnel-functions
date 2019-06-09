@@ -7,20 +7,38 @@ el.innerText = "Hello iframe page!";
 
 let utils = new Utils();
 
+let parentFunction;
+
 utils.registerServices({
 	endPoints: {
-		getEndPoint: function(oArgs) {
-			console.log("@getEndPoint service of endPoints in iframe", oArgs);
+		getParentFunction: function(oArgs) {
+			console.log("@getEndPoint service of endPoints in iframe");
+			parentFunction = oArgs.endPoint;
 		}
 	}
 });
 
-window.addEventListener("message", Utils.handleMessage);
+function getParentFunction() {
+	if (parentFunction) return;
+	utils.callService(
+		{
+			commInterface: {
+				name: "endPoints",
+				service: "serveParentFunction",
+				oArgs: {
+					frameID: window.frameElement.id
+				}
+			}
+		});
+}
 
-utils.postMessageToParent(
-	{
-		commInterface: {
-			name: "endPoints",
-			service: "getEndPoint"
+function runParentFunction() {
+	if (parentFunction) {
+		parentFunction();
 	}
-}, false);
+	else {
+		alert("Please click on get parent function button first.");
+	}
+}
+
+

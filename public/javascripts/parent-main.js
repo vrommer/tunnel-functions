@@ -7,23 +7,10 @@ el.innerText = "Hello main page!";
 
 let utils = new Utils();
 
-utils.registerServices({
-	endPoints: {
-		getEndPoint: function() {
-			console.log("@getEndPoint service of endPoints");
-			utils.postMessageToChild("vr-ifame-page", {
-				commInterface: {
-					name: "endPoints",
-					service: "getEndPoint",
-					args: {abc: "abc"}
-				}
-			}, false);
-		}
-	}
+utils.exposeFunctions({
+	parentFunction: parentFunction
 });
 
-function endPoint() {
-	console.log("This function is defined in parent!");
+function parentFunction() {
+	alert("This function is defined in parent!");
 }
-
-window.addEventListener('message', Utils.handleMessage);
