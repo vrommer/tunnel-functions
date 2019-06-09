@@ -23,6 +23,8 @@ body {
 
 #vr-page-header:after {
   position: absolute;
+  border: 1px solid black;
+  border-radius: 3px;
   content: "main page";
   top: -10px;
   left: 50%;

@@ -9,36 +9,17 @@ let utils = new Utils();
 
 let parentFunction;
 
-utils.registerServices({
-	endPoints: {
-		getParentFunction: function(oArgs) {
-			console.log("@getEndPoint service of endPoints in iframe");
-			parentFunction = oArgs.endPoint;
-		}
-	}
-});
-
-function getParentFunction() {
+function getExposedFunction() {
 	if (parentFunction) return;
-	utils.callService(
-		{
-			commInterface: {
-				name: "endPoints",
-				service: "serveParentFunction",
-				oArgs: {
-					frameID: window.frameElement.id
-				}
-			}
-		});
+	utils.getExposedFunction("changeBackgroundColorInHeader", (oArgs) => {
+		parentFunction = oArgs.endPoint;
+		document.querySelector("#vr-buttons button:nth-child(2)").disabled = false;
+	});
 }
 
-function runParentFunction() {
+function runExposedFunction() {
 	if (parentFunction) {
 		parentFunction();
 	}
-	else {
-		alert("Please click on get parent function button first.");
-	}
 }
-
 

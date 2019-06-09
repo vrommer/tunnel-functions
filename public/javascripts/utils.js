@@ -6,33 +6,29 @@ class Utils {
 		let that = this;
 		this.oTunnels = {};
 		this.oEndPoints = {};
-		this.UUID = 0;
-		this.subscribers = [];
-		this.servedFunctions = (function() {
-			let subscribers =[];
+		this.parentFunctions = (function() {
+			let subscribers = [];
 			return {
-				subscribe: function (fnCallback) {
+				subscribe: function(fnCallback) {
 					subscribers.push(fnCallback);
 				},
-				publish: function(oData) {
-					subscribers.forEach(fnCallback => fnCallback(oData));
+				publish: function() {
+
 				}
 			}
 		})();
+		this.UUID = 0;
+		this.childrenSubscribe = {};
+		this.subscribers = [];
 		this.services = {
 			endPoints: {
-				registerEndPointGetter: function(oArgs) {
-					let sFuncName = oArgs.sFuncName,
-						capitalizedFuncName = sFuncName.charAt(0).toUpperCase() + sFuncName.slice(1);
-						oServiceInterface = {};
-					oServices = {
-						endPoints: {}
-					};
-					oServiceInterface.endPoints["get" + capitalizedFuncName] = function (oArgs) {
-						this.servedFunctions.publish(oArgs);
-					};
-
-					that.registerServices(oServices);
+				exposeSubscribeForChild: function (oArgs) {
+					that.exposeSubscribeForChild(oArgs);
+				}, parentSubscribe: function(oArgs) {
+					oArgs.endPoint(aFunctions => {
+						console.log("ASDASd");
+						aFunctions.forEach(fn => that.parentFunctions.publish(fn));
+					});
 				}
 			},
 			endPointInvocation: {
@@ -79,12 +75,40 @@ class Utils {
 		}
 	}
 
-	exposeFunction(sMethodName, fnMethod) {
+	exposeSubscribeForChild(oArgs) {
+		let that = this;
+		this.callChildService(oArgs.frameID, {
+			commInterface: {
+				name: "endPoints",
+				service: "parentSubscribe",
+				oArgs: {
+					endPoint: that.subscribeExposedFunctions
+				}
+			}
+		});
+	}
+
+	exposeSubscribeForParent(oArgs) {
+		this.callParentService({
+			commInterface: {
+				name: "endPoints",
+				service: "parentSubscribe",
+				oArgs: {
+
+				}
+			}
+		});
+	}
+
+	requestSubscribe() {
+
+	}
+
+	exposeFunction(sFuncName, fnMethod) {
 		let services = {
 			endPoints: {}
 		},
-			capitalizedFunctionName = sMethodName.charAt(0).toUpperCase() + sMethodName.slice(1),
-			iframes = document.getElementsByTagName("iframe");
+			capitalizedFunctionName = this.capitalizeString(sFuncName);
 		services.endPoints["serve" + capitalizedFunctionName] = function(oArgs) {
 			console.log("@getEndPoint service of endPoints");
 			utils.callChildService(oArgs.frameID, {
@@ -92,7 +116,7 @@ class Utils {
 					name: "endPoints",
 					service: "get" + capitalizedFunctionName,
 					oArgs: {
-						endPointName: sMethodName,
+						endPointName: sFuncName,
 						endPoint: fnMethod
 					}
 				}
@@ -100,6 +124,29 @@ class Utils {
 		};
 
 		this.registerServices(services);
+	}
+
+	getExposedFunction(sFuncName, fnCallback) {
+
+		let oServices = {
+			endPoints: {}
+		},
+			capitalizedFunctionName = this.capitalizeString(sFuncName);
+		oServices.endPoints["get" + capitalizedFunctionName] = function(oArgs) {
+			fnCallback(oArgs);
+		};
+		this.registerServices(oServices);
+		utils.callService(
+			{
+				commInterface: {
+					name: "endPoints",
+					service: "serve" + capitalizedFunctionName,
+					oArgs: {
+						frameID: window.frameElement.id
+					}
+				}
+			}
+		);
 	}
 
 	handleServiceRequest(oMessage) {
@@ -118,7 +165,16 @@ class Utils {
 	}
 
 	registerServices(oServices) {
-		this.services = {...this.services, ...oServices}
+		for (let sInterface in oServices) {
+			if (oServices.hasOwnProperty(sInterface)) {
+				if (this.services.hasOwnProperty(sInterface)) {
+					this.services[sInterface] = {...this.services[sInterface], ...oServices[sInterface]};
+				}
+				else {
+					this.services = {...this.services, ...oServices};
+				}
+			}
+		}
 	}
 
 	callService(oData) {
@@ -138,11 +194,11 @@ class Utils {
 		iFrame.contentWindow.postMessage(this.stringify(oData));
 	}
 
-	publishExposedFunctions() {
-		this.subscribers.forEach(fn => fn(this.exposedFunctions));
+	publishExposedFunction(fnCallback) {
+		this.subscribers.forEach(fn => fn([fnCallback]));
 	}
 
-	subscribeExposedFunction(fnCallback) {
+	subscribeExposedFunctions(fnCallback) {
 		fnCallback(exposedFunctions);
 		this.subscribers.push(fnCallback);
 	}
@@ -191,5 +247,9 @@ class Utils {
 			}
 			return val;
 		});
+	}
+
+	capitalizeString(sInput) {
+		return sInput.charAt(0).toUpperCase() + sInput.slice(1);
 	}
 }
