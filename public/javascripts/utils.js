@@ -16,13 +16,12 @@ class Utils {
 				}
 			}
 		};
-
-		window.addEventListener("message", Utils.handleMessage);
+		window.addEventListener("message", this.handleMessage.bind(this));
 	}
 
-	static handleMessage(event) {
-		let msgData = utils.parse(event.data);
-		utils.handleServiceRequest(msgData);
+	handleMessage(event) {
+		let msgData = this.parse(event.data);
+		this.handleServiceRequest(msgData);
 	}
 
 	createEndPoint(oData) {
