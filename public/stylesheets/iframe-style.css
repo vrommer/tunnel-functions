@@ -6,6 +6,18 @@ body {
     text-align: center;
 }
 
+body:after {
+    position: absolute;
+    border: 1px solid black;
+    border-radius: 3px;
+    content: "iframe page";
+    top: -10px;
+    left: 50%;
+    background-color: white;
+    padding: 0 5px;
+    transform: translate(-50%,0);
+}
+
 html,
 body {
     height: 100%;

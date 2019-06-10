@@ -9,10 +9,6 @@ body {
   height: 100%;
 }
 
-#vr-page-title {
-
-}
-
 #vr-page-header {
   position: relative;
   margin: 5px;
@@ -31,4 +27,10 @@ body {
   background-color: white;
   padding: 0 5px;
   transform: translate(-50%,0);
+}
+
+#vr-buttons button {
+  height: 40px;
+  border-radius: 5px;
+  margin: 5px;
 }

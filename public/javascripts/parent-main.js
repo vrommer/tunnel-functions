@@ -7,6 +7,8 @@ el.innerText = "Hello main page!";
 
 let utils = new Utils();
 
+let childFunction;
+
 utils.exposeFunctions({
 	changeBackgroundColorInHeader: changeBackgroundColorInHeader
 });
@@ -24,4 +26,18 @@ function getRandomColor() {
 function changeBackgroundColorInHeader() {
 	console.log("Calling change on body background");
 	document.getElementById("vr-page-header").style.backgroundColor = getRandomColor();
+}
+
+function getExposedFunction() {
+	if (childFunction) return;
+	utils.getExposedFunction("changeBackgroundColorInBody", "parent", "vr-ifame-page", (oArgs) => {
+		childFunction = oArgs.endPoint;
+		document.querySelector("#vr-buttons button:nth-child(2)").disabled = false;
+	});
+}
+
+function runExposedFunction() {
+	if (childFunction) {
+		childFunction();
+	}
 }

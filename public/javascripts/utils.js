@@ -6,31 +6,8 @@ class Utils {
 		let that = this;
 		this.oTunnels = {};
 		this.oEndPoints = {};
-		this.parentFunctions = (function() {
-			let subscribers = [];
-			return {
-				subscribe: function(fnCallback) {
-					subscribers.push(fnCallback);
-				},
-				publish: function() {
-
-				}
-			}
-		})();
 		this.UUID = 0;
-		this.childrenSubscribe = {};
-		this.subscribers = [];
 		this.services = {
-			endPoints: {
-				exposeSubscribeForChild: function (oArgs) {
-					that.exposeSubscribeForChild(oArgs);
-				}, parentSubscribe: function(oArgs) {
-					oArgs.endPoint(aFunctions => {
-						console.log("ASDASd");
-						aFunctions.forEach(fn => that.parentFunctions.publish(fn));
-					});
-				}
-			},
 			endPointInvocation: {
 				invokeEndPoint: function (oArgs) {
 					let nUUID = oArgs.nUUID,
@@ -40,31 +17,36 @@ class Utils {
 			}
 		};
 
-		this.createEndPoint = fnCallback => {
-			if (this.oEndPoints[fnCallback]) {
-				return {
-					type: "endpoint",
-					UUID: this.oEndPoints[fnCallback]
-				};
-			}
-			this.UUID++;
-
-			this.oEndPoints[this.UUID] = {
-				fnCallback: fnCallback
-			};
-			this.oEndPoints[fnCallback] = this.UUID;
-
-			return {
-				type: "endpoint",
-				UUID: this.UUID
-			};
-		};
 		window.addEventListener("message", Utils.handleMessage);
 	}
 
 	static handleMessage(event) {
 		let msgData = utils.parse(event.data);
 		utils.handleServiceRequest(msgData);
+	}
+
+	createEndPoint(oData) {
+		let fnCallback = oData.endPoint,
+			sender = oData.sender;
+		if (this.oEndPoints[fnCallback]) {
+			return {
+				type: "endpoint",
+				UUID: this.oEndPoints[fnCallback],
+				sender: sender
+			};
+		}
+		this.UUID++;
+
+		this.oEndPoints[this.UUID] = {
+			fnCallback: fnCallback
+		};
+		this.oEndPoints[fnCallback] = this.UUID;
+
+		return {
+			type: "endpoint",
+			UUID: this.UUID,
+			sender: sender
+		};
 	}
 
 	exposeFunctions(oFunctions) {
@@ -75,47 +57,22 @@ class Utils {
 		}
 	}
 
-	exposeSubscribeForChild(oArgs) {
-		let that = this;
-		this.callChildService(oArgs.frameID, {
-			commInterface: {
-				name: "endPoints",
-				service: "parentSubscribe",
-				oArgs: {
-					endPoint: that.subscribeExposedFunctions
-				}
-			}
-		});
-	}
-
-	exposeSubscribeForParent(oArgs) {
-		this.callParentService({
-			commInterface: {
-				name: "endPoints",
-				service: "parentSubscribe",
-				oArgs: {
-
-				}
-			}
-		});
-	}
-
-	requestSubscribe() {
-
-	}
-
 	exposeFunction(sFuncName, fnMethod) {
 		let services = {
 			endPoints: {}
 		},
-			capitalizedFunctionName = this.capitalizeString(sFuncName);
+			capitalizedFunctionName = Utils.capitalizeString(sFuncName);
 		services.endPoints["serve" + capitalizedFunctionName] = function(oArgs) {
+			let sender = oArgs.sender,
+				recipient = oArgs.recipient;
 			console.log("@getEndPoint service of endPoints");
-			utils.callChildService(oArgs.frameID, {
+			utils.callService({
 				commInterface: {
 					name: "endPoints",
 					service: "get" + capitalizedFunctionName,
 					oArgs: {
+						sender: recipient,
+						recipient: sender,
 						endPointName: sFuncName,
 						endPoint: fnMethod
 					}
@@ -126,12 +83,16 @@ class Utils {
 		this.registerServices(services);
 	}
 
-	getExposedFunction(sFuncName, fnCallback) {
+	getExposedFunction(sFuncName, sSender, sRecipient, fnCallback) {
 
 		let oServices = {
 			endPoints: {}
 		},
-			capitalizedFunctionName = this.capitalizeString(sFuncName);
+			sender = sSender,
+			capitalizedFunctionName = Utils.capitalizeString(sFuncName);
+		if (sender === "child") {
+			sender = window.frameElement.id;
+		}
 		oServices.endPoints["get" + capitalizedFunctionName] = function(oArgs) {
 			fnCallback(oArgs);
 		};
@@ -142,7 +103,8 @@ class Utils {
 					name: "endPoints",
 					service: "serve" + capitalizedFunctionName,
 					oArgs: {
-						frameID: window.frameElement.id
+						sender: sender,
+						recipient: sRecipient,
 					}
 				}
 			}
@@ -178,10 +140,10 @@ class Utils {
 	}
 
 	callService(oData) {
-		if (oData.commInterface.oArgs.frameID === "parent") {
-			this.callChildService(oData.commInterface.oArgs.frameID, oData)
+		if (oData.commInterface.oArgs.recipient === "parent") {
+			this.callParentService(oData);
 		} else {
-			this.callParentService(oData)
+			this.callChildService(oData.commInterface.oArgs.recipient, oData)
 		}
 	}
 
@@ -194,28 +156,16 @@ class Utils {
 		iFrame.contentWindow.postMessage(this.stringify(oData));
 	}
 
-	publishExposedFunction(fnCallback) {
-		this.subscribers.forEach(fn => fn([fnCallback]));
-	}
-
-	subscribeExposedFunctions(fnCallback) {
-		fnCallback(exposedFunctions);
-		this.subscribers.push(fnCallback);
-	}
-
 	stringify(oData) {
-		let that = this;
+		let that = this,
+			sender = oData && oData.commInterface && oData.commInterface.oArgs && oData.commInterface.oArgs.sender;
 		return JSON.stringify(oData, (key, val) => {
 			if (typeof val === "function") {
-				let nUUID = that.oEndPoints[val];
 
-				if (nUUID) {
-					return {
-						type: "endpoint",
-						UUID: nUUID
-					};
-				}
-				return that.createEndPoint(val);
+				return that.createEndPoint({
+					endPoint: val,
+					sender: sender
+				});
 
 			}
 			return val;
@@ -228,13 +178,14 @@ class Utils {
 		return JSON.parse(sData, (key, val) => {
 			if (val && val.type === "endpoint") {
 				let fnTunnel = function () {
-					return that.callParentService({
+					return that.callService({
 						commInterface: {
 							name: "endPointInvocation",
 							service: "invokeEndPoint",
 							oArgs: {
 								nUUID: val.UUID,
-								oArgs: val.oArgs
+								oArgs: val.oArgs,
+								recipient: val.sender
 							}
 						}
 					});
@@ -249,7 +200,7 @@ class Utils {
 		});
 	}
 
-	capitalizeString(sInput) {
+	static capitalizeString(sInput) {
 		return sInput.charAt(0).toUpperCase() + sInput.slice(1);
 	}
 }
