@@ -3,16 +3,15 @@
  */
 class Utils {
 	constructor() {
-		let that = this;
 		this.oTunnels = {};
 		this.oEndPoints = {};
 		this.UUID = 0;
 		this.services = {
 			endPointInvocation: {
-				invokeEndPoint: function (oArgs) {
+				invokeEndPoint: oArgs => {
 					let nUUID = oArgs.nUUID,
 						oData = oArgs.oData;
-					that.oEndPoints[nUUID].fnCallback(oData);
+					this.oEndPoints[nUUID].fnCallback(oData);
 				}
 			}
 		};
@@ -51,7 +50,7 @@ class Utils {
 	exposeFunctions(oFunctions) {
 		for (let fnMethod in oFunctions) {
 			if (oFunctions.hasOwnProperty(fnMethod)) {
-				this.exposeFunction(fnMethod, oFunctions[fnMethod]);
+				this.exposeFunction(fnMethod, oFunctions[fnMethod].fnCallback, oFunctions[fnMethod].context);
 			}
 		}
 	}
@@ -156,12 +155,11 @@ class Utils {
 	}
 
 	stringify(oData) {
-		let that = this,
-			sender = oData && oData.commInterface && oData.commInterface.oArgs && oData.commInterface.oArgs.sender;
+		let sender = oData && oData.commInterface && oData.commInterface.oArgs && oData.commInterface.oArgs.sender;
 		return JSON.stringify(oData, (key, val) => {
 			if (typeof val === "function") {
 
-				return that.createEndPoint({
+				return this.createEndPoint({
 					endPoint: val,
 					sender: sender
 				});
@@ -172,12 +170,11 @@ class Utils {
 	}
 
 	parse(sData) {
-		let that = this;
 		if (!((typeof sData) === "string")) return;
 		return JSON.parse(sData, (key, val) => {
 			if (val && val.type === "endpoint") {
-				let fnTunnel = function () {
-					return that.callService({
+				let fnTunnel = () => {
+					return this.callService({
 						commInterface: {
 							name: "endPointInvocation",
 							service: "invokeEndPoint",
@@ -190,10 +187,10 @@ class Utils {
 					});
 				};
 
-				that.oTunnels[fnTunnel] = val.UUID;
+				this.oTunnels[fnTunnel] = val.UUID;
 				return fnTunnel;
 			} else if (val.type === "tunnel") {
-				return that.oEndPoints[val.UUID].fnCallback;
+				return this.oEndPoints[val.UUID].fnCallback;
 			}
 			return val;
 		});

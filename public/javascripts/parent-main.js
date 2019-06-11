@@ -10,7 +10,10 @@ let utils = new Utils();
 let childFunction;
 
 utils.exposeFunctions({
-	changeBackgroundColorInHeader: changeBackgroundColorInHeader
+	changeBackgroundColorInHeader: {
+		fnCallback: changeBackgroundColorInHeader,
+		context: this
+	}
 });
 
 function getRandomColor() {
