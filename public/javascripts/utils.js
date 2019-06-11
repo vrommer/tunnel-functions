@@ -10,8 +10,8 @@ class Utils {
 			endPointInvocation: {
 				invokeEndPoint: oArgs => {
 					let nUUID = oArgs.nUUID,
-						oData = oArgs.oData;
-					this.oEndPoints[nUUID].fnCallback(oData);
+						aParams = oArgs.aParams;
+					this.oEndPoints[nUUID].fnCallback.apply(this.oEndPoints[nUUID].context, aParams);
 				}
 			}
 		};
@@ -25,7 +25,8 @@ class Utils {
 
 	createEndPoint(oData) {
 		let fnCallback = oData.endPoint,
-			sender = oData.sender;
+			sender = oData.sender,
+			context = oData.context;
 		if (this.oEndPoints[fnCallback]) {
 			return {
 				type: "endpoint",
@@ -36,15 +37,17 @@ class Utils {
 		this.UUID++;
 
 		this.oEndPoints[this.UUID] = {
-			fnCallback: fnCallback
+			fnCallback: fnCallback,
+			context: context
 		};
 		this.oEndPoints[fnCallback] = this.UUID;
-
-		return {
-			type: "endpoint",
-			UUID: this.UUID,
-			sender: sender
-		};
+		if (sender) {
+			return {
+				type: "endpoint",
+				UUID: this.UUID,
+				sender: sender
+			};
+		}
 	}
 
 	exposeFunctions(oFunctions) {
@@ -55,7 +58,11 @@ class Utils {
 		}
 	}
 
-	exposeFunction(sFuncName, fnMethod) {
+	exposeFunction(sFuncName, fnMethod, oContext) {
+		this.createEndPoint({
+			endPoint: fnMethod,
+			context: oContext
+		});
 		let services = {
 			endPoints: {}
 		},
@@ -180,7 +187,7 @@ class Utils {
 							service: "invokeEndPoint",
 							oArgs: {
 								nUUID: val.UUID,
-								oArgs: val.oArgs,
+								aParams: val.aParams,
 								recipient: val.sender
 							}
 						}
